@@ -1,0 +1,15 @@
+{
+  "name": "plant-finder",
+  "version": "1.0.0",
+  "description": "Interactive plant finder web app connected to a Notion database",
+  "scripts": {
+    "dev": "netlify dev",
+    "build": "echo 'Static site - no build step required'"
+  },
+  "dependencies": {
+    "@notionhq/client": "^2.2.14"
+  },
+  "devDependencies": {
+    "netlify-cli": "^17.0.0"
+  }
+}
