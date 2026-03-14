@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>YouTube Transcript Extractor</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #f5f5f5;
+      color: #222;
+      min-height: 100vh;
+      padding: 2rem 1rem;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    h1 {
+      font-size: 1.8rem;
+      margin-bottom: 0.5rem;
+      color: #c00;
+    }
+    p.subtitle {
+      color: #555;
+      margin-bottom: 1.5rem;
+    }
+    .input-row {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+    input[type="text"] {
+      flex: 1;
+      padding: 0.6rem 0.9rem;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 1rem;
+    }
+    button {
+      padding: 0.6rem 1.4rem;
+      background: #c00;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+    button:hover { background: #a00; }
+    button:disabled { background: #aaa; cursor: not-allowed; }
+    #status { color: #555; font-size: 0.95rem; margin-bottom: 0.5rem; }
+    #error { color: #c00; margin-bottom: 0.5rem; }
+    .toolbar {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+    .toolbar button {
+      background: #555;
+      font-size: 0.85rem;
+      padding: 0.4rem 0.9rem;
+    }
+    .toolbar button:hover { background: #333; }
+    textarea {
+      width: 100%;
+      height: 400px;
+      padding: 0.8rem;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 0.95rem;
+      font-family: inherit;
+      resize: vertical;
+      background: #fff;
+    }
+    #info { color: #555; font-size: 0.85rem; margin-top: 0.4rem; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>YouTube Transcript Extractor</h1>
+    <p class="subtitle">Paste a YouTube URL to extract its transcript as plain text.</p>
+
+    <div class="input-row">
+      <input type="text" id="urlInput" placeholder="https://www.youtube.com/watch?v=..." />
+      <button id="fetchBtn" onclick="fetchTranscript()">Extract</button>
+    </div>
+
+    <div id="status"></div>
+    <div id="error"></div>
+
+    <div class="toolbar" id="toolbar" style="display:none">
+      <button onclick="copyText()">Copy</button>
+      <button onclick="downloadText()">Download .txt</button>
+      <button onclick="downloadJson()">Download .json</button>
+    </div>
+
+    <textarea id="output" readonly placeholder="Transcript will appear here..."></textarea>
+    <div id="info"></div>
+  </div>
+
+  <script>
+    let lastData = null;
+
+    // Pre-fill with the provided video URL
+    window.addEventListener('DOMContentLoaded', () => {
+      const params = new URLSearchParams(location.search);
+      const v = params.get('url');
+      if (v) document.getElementById('urlInput').value = v;
+    });
+
+    async function fetchTranscript() {
+      const url = document.getElementById('urlInput').value.trim();
+      if (!url) return;
+
+      const btn = document.getElementById('fetchBtn');
+      const status = document.getElementById('status');
+      const errorEl = document.getElementById('error');
+      const output = document.getElementById('output');
+      const info = document.getElementById('info');
+      const toolbar = document.getElementById('toolbar');
+
+      btn.disabled = true;
+      status.textContent = 'Fetching transcript...';
+      errorEl.textContent = '';
+      output.value = '';
+      info.textContent = '';
+      toolbar.style.display = 'none';
+      lastData = null;
+
+      try {
+        const res = await fetch(`/api/youtube-transcript?url=${encodeURIComponent(url)}`);
+        const data = await res.json();
+
+        if (!res.ok) {
+          errorEl.textContent = data.error || 'Failed to fetch transcript.';
+          status.textContent = '';
+          return;
+        }
+
+        lastData = data;
+        output.value = data.fullText;
+        info.textContent = `${data.totalEntries} segments — Video ID: ${data.videoId}`;
+        toolbar.style.display = 'flex';
+        status.textContent = 'Done!';
+      } catch (e) {
+        errorEl.textContent = 'Network error: ' + e.message;
+        status.textContent = '';
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    function copyText() {
+      const output = document.getElementById('output');
+      navigator.clipboard.writeText(output.value).then(() => {
+        document.getElementById('status').textContent = 'Copied to clipboard!';
+      });
+    }
+
+    function downloadText() {
+      if (!lastData) return;
+      download(lastData.fullText, `transcript-${lastData.videoId}.txt`, 'text/plain');
+    }
+
+    function downloadJson() {
+      if (!lastData) return;
+      download(JSON.stringify(lastData.entries, null, 2), `transcript-${lastData.videoId}.json`, 'application/json');
+    }
+
+    function download(content, filename, type) {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([content], { type }));
+      a.download = filename;
+      a.click();
+    }
+
+    document.getElementById('urlInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') fetchTranscript();
+    });
+  </script>
+</body>
+</html>

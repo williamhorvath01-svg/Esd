@@ -7,7 +7,8 @@
     "build": "echo 'Static site - no build step required'"
   },
   "dependencies": {
-    "@notionhq/client": "^2.2.14"
+    "@notionhq/client": "^2.2.14",
+    "youtube-transcript": "^1.3.0"
   },
   "devDependencies": {
     "netlify-cli": "^17.0.0"
